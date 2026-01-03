@@ -1,0 +1,118 @@
+# Docker Compose for OxideQ
+# Usage:
+#   Standalone: docker compose up oxideq
+#   Cluster:    docker compose --profile cluster up
+
+services:
+  # Standalone mode (default)
+  oxideq:
+    build: .
+    ports:
+      - "8540:8540"
+    environment:
+      - OXIDEQ_PASSWORD=${OXIDEQ_PASSWORD:-changeme}
+      - OXIDEQ_PORT=8540
+      - OXIDEQ_TASK_TIMEOUT=${OXIDEQ_TASK_TIMEOUT:-30}
+      - OXIDEQ_CLEANUP_INTERVAL=${OXIDEQ_CLEANUP_INTERVAL:-5}
+      - OXIDEQ_HEARTBEAT_DURATION=${OXIDEQ_HEARTBEAT_DURATION:-60}
+      # Uncomment to enable persistence:
+      # - OXIDEQ_WAL_PATH=/app/data/wal
+    volumes:
+      - oxideq-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8540/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  # Cluster mode - Node 1 (Leader bootstrap)
+  oxideq-node1:
+    build: .
+    profiles: ["cluster"]
+    ports:
+      - "8541:8540"
+      - "9001:9001"
+    environment:
+      - OXIDEQ_PASSWORD=${OXIDEQ_PASSWORD:-changeme}
+      - OXIDEQ_PORT=8540
+      - OXIDEQ_CLUSTER_MODE=true
+      - OXIDEQ_NODE_ID=1
+      - OXIDEQ_RAFT_ADDR=oxideq-node1:9001
+      - OXIDEQ_WAL_PATH=/app/data/wal
+      - OXIDEQ_TASK_TIMEOUT=${OXIDEQ_TASK_TIMEOUT:-30}
+      - OXIDEQ_CLEANUP_INTERVAL=${OXIDEQ_CLEANUP_INTERVAL:-5}
+    volumes:
+      - oxideq-node1-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8540/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Cluster mode - Node 2
+  oxideq-node2:
+    build: .
+    profiles: ["cluster"]
+    ports:
+      - "8542:8540"
+      - "9002:9001"
+    environment:
+      - OXIDEQ_PASSWORD=${OXIDEQ_PASSWORD:-changeme}
+      - OXIDEQ_PORT=8540
+      - OXIDEQ_CLUSTER_MODE=true
+      - OXIDEQ_NODE_ID=2
+      - OXIDEQ_RAFT_ADDR=oxideq-node2:9001
+      - OXIDEQ_WAL_PATH=/app/data/wal
+      - OXIDEQ_TASK_TIMEOUT=${OXIDEQ_TASK_TIMEOUT:-30}
+      - OXIDEQ_CLEANUP_INTERVAL=${OXIDEQ_CLEANUP_INTERVAL:-5}
+    volumes:
+      - oxideq-node2-data:/app/data
+    depends_on:
+      oxideq-node1:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8540/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  # Cluster mode - Node 3
+  oxideq-node3:
+    build: .
+    profiles: ["cluster"]
+    ports:
+      - "8543:8540"
+      - "9003:9001"
+    environment:
+      - OXIDEQ_PASSWORD=${OXIDEQ_PASSWORD:-changeme}
+      - OXIDEQ_PORT=8540
+      - OXIDEQ_CLUSTER_MODE=true
+      - OXIDEQ_NODE_ID=3
+      - OXIDEQ_RAFT_ADDR=oxideq-node3:9001
+      - OXIDEQ_WAL_PATH=/app/data/wal
+      - OXIDEQ_TASK_TIMEOUT=${OXIDEQ_TASK_TIMEOUT:-30}
+      - OXIDEQ_CLEANUP_INTERVAL=${OXIDEQ_CLEANUP_INTERVAL:-5}
+    volumes:
+      - oxideq-node3-data:/app/data
+    depends_on:
+      oxideq-node1:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8540/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  oxideq-data:
+  oxideq-node1-data:
+  oxideq-node2-data:
+  oxideq-node3-data:

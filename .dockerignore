@@ -1,0 +1,30 @@
+# Build artifacts
+target/
+debug/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Documentation (not needed in image)
+docs/
+*.md
+!README.md
+
+# Environment files (secrets should be passed via env vars)
+.env
+.env.*
+
+# Test data
+data/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db

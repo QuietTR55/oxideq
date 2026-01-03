@@ -10,7 +10,15 @@ use tower::ServiceExt;
 
 #[tokio::test]
 async fn test_create_queue() {
-    let app = app("test_password".to_string(), 5, 30);
+    let app = app(
+        std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()),
+        "test_password".to_string(),
+        5,
+        30,
+        60,
+        None,
+    )
+    .await;
 
     let response = app
         .oneshot(
@@ -32,7 +40,15 @@ async fn test_create_queue() {
 
 #[tokio::test]
 async fn test_enqueue_dequeue() {
-    let app = app("test_password".to_string(), 5, 30);
+    let app = app(
+        std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()),
+        "test_password".to_string(),
+        5,
+        30,
+        60,
+        None,
+    )
+    .await;
     let queue_name = "task_queue";
 
     // Create queue first
@@ -96,7 +112,15 @@ async fn test_enqueue_dequeue() {
 
 #[tokio::test]
 async fn test_unauthorized() {
-    let app = app("secret_password".to_string(), 5, 30);
+    let app = app(
+        std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()),
+        "secret_password".to_string(),
+        5,
+        30,
+        60,
+        None,
+    )
+    .await;
 
     // No header
     let response = app
@@ -137,7 +161,15 @@ async fn test_unauthorized() {
 
 #[tokio::test]
 async fn test_create_task_with_extra_fields() {
-    let app = app("test_password".to_string(), 5, 30);
+    let app = app(
+        std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()),
+        "test_password".to_string(),
+        5,
+        30,
+        60,
+        None,
+    )
+    .await;
     let queue_name = "repro_queue";
 
     // Create queue
@@ -212,7 +244,15 @@ async fn test_create_task_with_extra_fields() {
 
 #[tokio::test]
 async fn test_ack_workflow() {
-    let app = app("test_password".to_string(), 5, 30);
+    let app = app(
+        std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()),
+        "test_password".to_string(),
+        5,
+        30,
+        60,
+        None,
+    )
+    .await;
     let queue_name = "ack_queue";
 
     // Create Queue
@@ -324,7 +364,15 @@ async fn test_ack_workflow() {
 
 #[tokio::test]
 async fn test_nack_workflow() {
-    let app = app("test_password".to_string(), 5, 30);
+    let app = app(
+        std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()),
+        "test_password".to_string(),
+        5,
+        30,
+        60,
+        None,
+    )
+    .await;
     let queue_name = "nack_queue";
 
     // Create Queue
@@ -442,7 +490,15 @@ async fn test_nack_workflow() {
 #[tokio::test]
 async fn test_timeout_cleanup() {
     // 1 second cleanup interval, 1 second timeout
-    let app = app("test_password".to_string(), 1, 1);
+    let app = app(
+        std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()),
+        "test_password".to_string(),
+        1,
+        1,
+        60,
+        None,
+    )
+    .await;
     let queue_name = "timeout_queue";
 
     // Create & Enqueue
