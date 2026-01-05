@@ -6,6 +6,7 @@ use bytes::Bytes;
 use http_body_util::BodyExt;
 use oxideq::app;
 use serde_json::json;
+use tokio_util::sync::CancellationToken;
 use tower::ServiceExt;
 
 #[tokio::test]
@@ -17,6 +18,7 @@ async fn test_create_queue() {
         30,
         60,
         None,
+        CancellationToken::new(),
     )
     .await;
 
@@ -47,6 +49,7 @@ async fn test_enqueue_dequeue() {
         30,
         60,
         None,
+        CancellationToken::new(),
     )
     .await;
     let queue_name = "task_queue";
@@ -119,6 +122,7 @@ async fn test_unauthorized() {
         30,
         60,
         None,
+        CancellationToken::new(),
     )
     .await;
 
@@ -168,6 +172,7 @@ async fn test_create_task_with_extra_fields() {
         30,
         60,
         None,
+        CancellationToken::new(),
     )
     .await;
     let queue_name = "repro_queue";
@@ -251,6 +256,7 @@ async fn test_ack_workflow() {
         30,
         60,
         None,
+        CancellationToken::new(),
     )
     .await;
     let queue_name = "ack_queue";
@@ -371,6 +377,7 @@ async fn test_nack_workflow() {
         30,
         60,
         None,
+        CancellationToken::new(),
     )
     .await;
     let queue_name = "nack_queue";
@@ -497,6 +504,7 @@ async fn test_timeout_cleanup() {
         1,
         60,
         None,
+        CancellationToken::new(),
     )
     .await;
     let queue_name = "timeout_queue";

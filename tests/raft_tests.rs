@@ -5,6 +5,7 @@ use axum::{
 use http_body_util::BodyExt;
 use openraft::raft::VoteRequest;
 use oxideq::app;
+use tokio_util::sync::CancellationToken;
 use tower::ServiceExt;
 
 #[tokio::test]
@@ -17,6 +18,7 @@ async fn test_raft_endpoints_uninitialized() {
         30,
         60,
         None,
+        CancellationToken::new(),
     )
     .await;
 

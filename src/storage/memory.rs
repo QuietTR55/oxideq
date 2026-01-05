@@ -265,7 +265,7 @@ impl Storage for InMemoryStorage {
                     // WAL write failed - this is a critical error
                     // The task is already removed from memory, so we can't restore it
                     // Log and return error, but the ack is effectively complete
-                    eprintln!("WAL write failed for ack {}: {}", task_id, e);
+                    tracing::error!(task_id = %task_id, error = %e, "WAL write failed for ack");
                     return Err(format!("WAL write failed: {}", e));
                 }
             }

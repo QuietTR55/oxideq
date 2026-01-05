@@ -8,8 +8,14 @@ use axum::{
     routing::{get, post},
 };
 use subtle::ConstantTimeEq;
+use tokio_util::sync::CancellationToken;
+
 pub mod replication;
+pub mod server;
+pub mod shutdown;
 pub mod storage;
+pub mod telemetry;
+pub mod tls;
 use openraft::BasicNode;
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
@@ -652,6 +658,7 @@ pub async fn app(
     task_timeout: u64,
     heartbeat_duration: u64,
     raft: Option<OxideRaft>,
+    shutdown_token: CancellationToken,
 ) -> Router {
     let state = AppState {
         storage: storage.clone(),
@@ -660,32 +667,39 @@ pub async fn app(
         heartbeat_duration,
     };
 
-    // Spawn cleanup task
+    // Spawn cleanup task with cancellation support
     let storage_clone = storage.clone();
     let raft_clone = state.raft.clone();
+    let token = shutdown_token.clone();
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(cleanup_interval));
         loop {
-            interval.tick().await;
-
-            if let Some(raft) = &raft_clone {
-                // Cluster Mode: Only leader initiates cleanup via Raft log
-                let is_leader = raft.metrics().borrow().state == openraft::ServerState::Leader;
-                if is_leader {
-                    let expired = storage_clone.scan_expired_tasks(task_timeout);
-                    for id in expired {
-                        let req = ClientRequest::Nack {
-                            task_id: id.clone(),
-                        };
-                        if let Err(e) = raft.client_write(req).await {
-                            eprintln!("Raft cleanup error for task {}: {}", id, e);
+            tokio::select! {
+                _ = token.cancelled() => {
+                    tracing::info!("Cleanup task shutting down");
+                    break;
+                }
+                _ = interval.tick() => {
+                    if let Some(raft) = &raft_clone {
+                        // Cluster Mode: Only leader initiates cleanup via Raft log
+                        let is_leader = raft.metrics().borrow().state == openraft::ServerState::Leader;
+                        if is_leader {
+                            let expired = storage_clone.scan_expired_tasks(task_timeout);
+                            for id in expired {
+                                let req = ClientRequest::Nack {
+                                    task_id: id.clone(),
+                                };
+                                if let Err(e) = raft.client_write(req).await {
+                                    tracing::error!(task_id = %id, error = %e, "Raft cleanup error");
+                                }
+                            }
+                        }
+                    } else {
+                        // Standalone Mode: Direct cleanup
+                        if let Err(e) = storage_clone.cleanup_expired_tasks(task_timeout).await {
+                            tracing::error!(error = %e, "Cleanup error");
                         }
                     }
-                }
-            } else {
-                // Standalone Mode: Direct cleanup
-                if let Err(e) = storage_clone.cleanup_expired_tasks(task_timeout).await {
-                    eprintln!("Cleanup error: {}", e);
                 }
             }
         }

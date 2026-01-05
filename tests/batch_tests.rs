@@ -6,11 +6,12 @@ use bytes::Bytes;
 use http_body_util::BodyExt;
 use oxideq::app;
 use serde_json::json;
+use tokio_util::sync::CancellationToken;
 use tower::ServiceExt;
 
 #[tokio::test]
 async fn test_batch_json_workflow() {
-    let app = app(std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()), "test_password".to_string(), 5, 30, 60, None).await;
+    let app = app(std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()), "test_password".to_string(), 5, 30, 60, None, CancellationToken::new()).await;
     let queue_name = "batch_json_queue";
 
     // Create Queue
@@ -119,7 +120,7 @@ async fn test_batch_json_workflow() {
 
 #[tokio::test]
 async fn test_batch_msgpack_workflow() {
-    let app = app(std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()), "test_password".to_string(), 5, 30, 60, None).await;
+    let app = app(std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()), "test_password".to_string(), 5, 30, 60, None, CancellationToken::new()).await;
     let queue_name = "batch_msgpack_queue";
 
     // Create Queue
@@ -182,6 +183,7 @@ async fn test_batch_msgpack_workflow() {
     // Response is Array of { id, message }
     #[derive(serde::Deserialize, Debug)]
     struct BatchItem {
+        #[allow(dead_code)]
         id: String,
         message: serde_json::Value,
     }
@@ -195,7 +197,7 @@ async fn test_batch_msgpack_workflow() {
 #[tokio::test]
 async fn test_single_binary_protocol() {
     // Tests that normal enqueue/dequeue supports binary (bytes) via pass-through
-    let app = app(std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()), "test_password".to_string(), 5, 30, 60, None).await;
+    let app = app(std::sync::Arc::new(oxideq::storage::memory::InMemoryStorage::new()), "test_password".to_string(), 5, 30, 60, None, CancellationToken::new()).await;
     let queue_name = "binary_queue";
 
     // Create Queue
